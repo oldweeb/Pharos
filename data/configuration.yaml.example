@@ -1,0 +1,22 @@
+accounts:
+  - private_key: x
+    proxy: x
+
+settings:
+  accounts_mode: sequential
+  randomize_feature_order: false
+  swaps:
+    percentage_of_balance: [1, 10]
+    count_of_swaps: [1, 5]
+    swap_back_to_native: true
+  faucet:
+    enabled: false
+    # @solvium_crypto_bot in TG
+    solvium_api_key: x
+  liquidity:
+    enabled: false
+  checkin:
+    enabled: false
+    auth_key: x
+
+# TODO: contracts deploy
