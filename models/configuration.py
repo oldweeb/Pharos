@@ -3,7 +3,7 @@ from typing import Optional
 from enum import Enum
 
 @dataclass
-class Account:
+class AccountConfig:
     private_key: str
     proxy: Optional[str]
 
@@ -42,6 +42,6 @@ class Settings:
 
 @dataclass
 class Configuration:
-    accounts: list[Account]
+    accounts: list[AccountConfig]
     settings: Settings
 

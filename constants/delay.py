@@ -1,0 +1,2 @@
+MAX_SLEEP = 30
+MIN_SLEEP = 3

@@ -1,9 +1,14 @@
 from abc import ABC, abstractmethod
 
-from models.configuration import Account
+from models.configuration import AccountConfig
 
 
 class BaseFeature(ABC):
+    @property
     @abstractmethod
-    async def execute(self, account: Account):
+    def name(self) -> str:
+        pass
+
+    @abstractmethod
+    async def execute(self, account: AccountConfig):
         pass
