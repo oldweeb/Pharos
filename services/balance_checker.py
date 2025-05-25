@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Tuple
 from web3 import AsyncWeb3
 from eth_account.signers.local import LocalAccount
 from eth_typing import Address, ChecksumAddress

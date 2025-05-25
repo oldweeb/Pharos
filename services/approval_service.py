@@ -1,6 +1,5 @@
 from loguru._logger import Logger
 from dependency_injector.wiring import inject, Provide
-from web3 import AsyncWeb3
 from eth_account.signers.local import LocalAccount
 
 from bootstrap.container import ApplicationContainer
