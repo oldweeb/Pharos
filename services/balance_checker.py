@@ -2,15 +2,17 @@ from typing import Optional, Tuple
 from web3 import AsyncWeb3
 from eth_account.signers.local import LocalAccount
 from eth_typing import Address, ChecksumAddress
-from constants.chain import RPC_URL
+from dependency_injector.wiring import inject, Provide
+from bootstrap.container import ApplicationContainer
 
 
 class BalanceChecker:
-    def __init__(self):
+    @inject
+    def __init__(self, web3: AsyncWeb3 = Provide[ApplicationContainer.web3]):
         """
         Initialize the BalanceChecker with an async Web3 instance.
         """
-        self.web3 = AsyncWeb3(AsyncWeb3.AsyncHTTPProvider(RPC_URL))
+        self.web3 = web3
 
     async def get_balance(self, token_address: str | Address | ChecksumAddress, account: LocalAccount) -> Tuple[int, int]:
         """

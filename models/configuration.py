@@ -6,12 +6,14 @@ from enum import Enum
 class AccountConfig:
     private_key: str
     proxy: Optional[str]
+    auth_key: str
 
 @dataclass
 class SwapsSettings:
     percentage_of_balance: list[int]
     count_of_swaps: list[int]
     swap_back_to_native: bool
+    retry_count: int
 
 @dataclass
 class FaucetSettings:
@@ -29,7 +31,8 @@ class AccountsMode(Enum):
 @dataclass
 class CheckinSettings:
     enabled: bool
-    auth_key: str
+    retry_count: int
+    pause_between_attemps: list[int]
 
 @dataclass
 class Settings:

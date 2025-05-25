@@ -4,17 +4,19 @@ from typing import Tuple
 from dependency_injector.wiring import inject, Provide
 from eth_account import Account
 from loguru._logger import Logger
-from web3 import AsyncHTTPProvider, AsyncWeb3
+from web3 import AsyncWeb3
 from eth_account.signers.local import LocalAccount
 
 from bootstrap.container import ApplicationContainer
-from constants.chain import RPC_URL
-from constants.contracts import TOKENS
+from constants.abi import ABI
+from constants.contracts import SWAP_ROUTER_ADDRESS, TOKENS
 from constants.delay import MAX_SLEEP, MIN_SLEEP
 from features.base import BaseFeature
 from models.configuration import SwapsSettings, AccountConfig
+from services.approval_service import ApprovalService
 from services.balance_checker import BalanceChecker
-
+from services.swap_transaction_builder import SwapTransactionBuilder
+from services.explorer_helper import ExplorerHelper
 
 class Swaps(BaseFeature):
     @inject
@@ -22,12 +24,15 @@ class Swaps(BaseFeature):
         self,
         balance_checker: BalanceChecker = Provide[ApplicationContainer.balance_checker],
         settings: SwapsSettings = Provide[ApplicationContainer.swaps_settings],
-        logger: Logger = Provide[ApplicationContainer.logger]
+        approval_service: ApprovalService = Provide[ApplicationContainer.approval_service],
+        logger: Logger = Provide[ApplicationContainer.logger],
+        web3: AsyncWeb3 = Provide[ApplicationContainer.web3]
     ):
         self._balance_checker = balance_checker
         self._settings = settings
         self._logger = logger
-        self._web3 = AsyncWeb3(AsyncHTTPProvider(RPC_URL))
+        self._web3 = web3
+        self._approval_service = approval_service
         self._pairs = [
             { 'in': 'PHRS', 'out': 'USDT' },
             { 'in': 'PHRS', 'out': 'USDC' },
@@ -55,7 +60,7 @@ class Swaps(BaseFeature):
         self._logger.info(f'[{account.address}] Will execute {count_of_swaps} swaps')
         sleep_time = random.randint(MIN_SLEEP, MAX_SLEEP)   
         self._logger.info(f'[{account.address}] Sleeping for {sleep_time} seconds before swapping')
-        await asyncio.sleep(sleep_time)
+        #await asyncio.sleep(sleep_time)
         for i in range(count_of_swaps):
             self._logger.info(f'[{account.address}] Executing swap #{i + 1}')
             await self._execute_swap(account)
@@ -71,16 +76,47 @@ class Swaps(BaseFeature):
             return
             
         pair = random.choice(valid_pairs)
-        balance, decimals = await self._balance_checker.get_balance(TOKENS[pair['in']]) \
+        balance, decimals = await self._balance_checker.get_balance(TOKENS[pair['in']], account) \
                             if pair['in'] != 'PHRS' \
                             else await self._balance_checker.get_native_balance(account)
         
-        swap_amount = balance * self._settings.percentage_of_balance / 100
-        self._logger.info(f'[{account.address}] Swapping {(swap_amount / 10 ** decimals):.4f} {pair["in"]} to {pair["out"]}')
+        swap_percentage = random.randint(self._settings.percentage_of_balance[0], self._settings.percentage_of_balance[1])
+        swap_amount = int(balance * swap_percentage / 100)
         
-            
-
-        pass    
+        for i in range(self._settings.retry_count):
+            self._logger.info(f'[{account.address}] Attempt {i + 1}: Swapping {(swap_amount / 10 ** decimals):.4f} {pair["in"]} to {pair["out"]}')
+            try:
+                if pair['in'] != 'PHRS':
+                    await self._approval_service.approve_token(account, TOKENS[pair['in']], SWAP_ROUTER_ADDRESS, swap_amount)
+                    
+                transaction = await SwapTransactionBuilder() \
+                    .with_in(pair['in']) \
+                    .with_out(pair['out']) \
+                    .with_amount(swap_amount) \
+                    .with_account(account) \
+                    .with_router(SWAP_ROUTER_ADDRESS, ABI['swap_router']) \
+                    .with_web3(self._web3) \
+                    .build()
+                    
+                signed_tx = account.sign_transaction(transaction)
+                
+                tx_hash = await self._web3.eth.send_raw_transaction(signed_tx.raw_transaction)
+                receipt = await self._web3.eth.wait_for_transaction_receipt(tx_hash)
+                
+                tx_url = ExplorerHelper.get_tx_url(tx_hash)
+                
+                if receipt['status'] == 1:
+                    self._logger.success(f'[{account.address}] ✅ Swap transaction was successful: {tx_url}')
+                    break
+                else:
+                    self._logger.error(f'[{account.address}] ❌ Swap transaction failed: {tx_url}')
+                
+            except Exception as e:
+                self._logger.error(f'[{account.address}] Error building transaction: {e}')
+            finally:
+                sleep_time = random.randint(MIN_SLEEP, MAX_SLEEP)   
+                self._logger.info(f'[{account.address}] Sleeping for {sleep_time} seconds before next swap')
+                await asyncio.sleep(sleep_time)
 
     async def _fetch_token_balances(self, account: LocalAccount) -> list[Tuple[str, Tuple[int, int]]]:
         balances = []

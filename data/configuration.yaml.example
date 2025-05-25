@@ -1,6 +1,7 @@
 accounts:
   - private_key: x
     proxy: x
+    auth_key: x
 
 settings:
   accounts_mode: sequential
@@ -9,6 +10,7 @@ settings:
     percentage_of_balance: [1, 10]
     count_of_swaps: [1, 5]
     swap_back_to_native: true
+    retry_count: 3
   faucet:
     enabled: false
     # @solvium_crypto_bot in TG
@@ -17,6 +19,7 @@ settings:
     enabled: false
   checkin:
     enabled: false
-    auth_key: x
+    retry_count: 3
+    pause_between_attempts: [10, 30]
 
 # TODO: contracts deploy

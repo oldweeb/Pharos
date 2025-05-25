@@ -1,0 +1,1 @@
+CHECKIN_API_URL = 'https://api.pharosnetwork.xyz/sign/in?address={address}'

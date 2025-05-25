@@ -3,9 +3,10 @@ import yaml
 from dacite import from_dict, Config
 from dependency_injector import containers, providers
 from loguru import logger
+from web3 import AsyncWeb3, AsyncHTTPProvider
 from models.configuration import Configuration, AccountsMode
 from runner import RunnerFactory
-from services.balance_checker import BalanceChecker
+from constants.chain import RPC_URL
 
 
 class ApplicationContainer(containers.DeclarativeContainer):
@@ -19,16 +20,25 @@ class ApplicationContainer(containers.DeclarativeContainer):
         config_path
     )
     logger = providers.Object(logger)
+    web3 = providers.Singleton(lambda: AsyncWeb3(AsyncHTTPProvider(RPC_URL)))
     swaps_settings = providers.DelegatedCallable(
         lambda configuration: configuration.settings.swaps,
         configuration
     )
-    balance_checker = providers.Singleton(lambda: BalanceChecker())
+    checkin_settings = providers.DelegatedCallable(
+        lambda configuration: configuration.settings.checkin,
+        configuration
+    )
+    approval_service = providers.Singleton(lambda: __import__('services.approval_service', fromlist=['ApprovalService']).ApprovalService())
+    balance_checker = providers.Singleton(lambda: __import__('services.balance_checker', fromlist=['BalanceChecker']).BalanceChecker())
     swaps = providers.Factory(
-        lambda balance_checker, settings, logger: __import__('features.swaps', fromlist=['Swaps']).Swaps(),
-        balance_checker, swaps_settings, logger
+        lambda: __import__('features.swaps', fromlist=['Swaps']).Swaps(),
+    )
+    checkin = providers.Factory(
+        lambda: __import__('features.checkin', fromlist=['CheckIn']).CheckIn(),
     )
     features = providers.List(
+        checkin,
         swaps
     )
     runner = providers.Factory(
