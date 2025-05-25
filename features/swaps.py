@@ -17,6 +17,7 @@ from services.approval_service import ApprovalService
 from services.balance_checker import BalanceChecker
 from services.swap_transaction_builder import SwapTransactionBuilder
 from services.explorer_helper import ExplorerHelper
+from services.web3_factory import Web3Factory
 
 class Swaps(BaseFeature):
     @inject
@@ -25,13 +26,11 @@ class Swaps(BaseFeature):
         balance_checker: BalanceChecker = Provide[ApplicationContainer.balance_checker],
         settings: SwapsSettings = Provide[ApplicationContainer.swaps_settings],
         approval_service: ApprovalService = Provide[ApplicationContainer.approval_service],
-        logger: Logger = Provide[ApplicationContainer.logger],
-        web3: AsyncWeb3 = Provide[ApplicationContainer.web3]
+        logger: Logger = Provide[ApplicationContainer.logger]
     ):
         self._balance_checker = balance_checker
         self._settings = settings
         self._logger = logger
-        self._web3 = web3
         self._approval_service = approval_service
         self._pairs = [
             { 'in': 'PHRS', 'out': 'USDT' },
@@ -63,11 +62,11 @@ class Swaps(BaseFeature):
         #await asyncio.sleep(sleep_time)
         for i in range(count_of_swaps):
             self._logger.info(f'[{account.address}] Executing swap #{i + 1}')
-            await self._execute_swap(account)
+            await self._execute_swap(account_config, account)
 
         
-    async def _execute_swap(self, account: LocalAccount) -> None:
-        valid_tokens = await self._filter_out_insufficient_balances(account)
+    async def _execute_swap(self, account_config: AccountConfig, account: LocalAccount) -> None:
+        valid_tokens = await self._filter_out_insufficient_balances(account_config, account)
             
         valid_pairs = [pair for pair in self._pairs if pair['in'] in valid_tokens]
         
@@ -76,9 +75,9 @@ class Swaps(BaseFeature):
             return
             
         pair = random.choice(valid_pairs)
-        balance, decimals = await self._balance_checker.get_balance(TOKENS[pair['in']], account) \
+        balance, decimals = await self._balance_checker.get_balance(account_config, TOKENS[pair['in']], account) \
                             if pair['in'] != 'PHRS' \
-                            else await self._balance_checker.get_native_balance(account)
+                            else await self._balance_checker.get_native_balance(account, account_config)
         
         swap_percentage = random.randint(self._settings.percentage_of_balance[0], self._settings.percentage_of_balance[1])
         swap_amount = int(balance * swap_percentage / 100)
@@ -87,29 +86,30 @@ class Swaps(BaseFeature):
             self._logger.info(f'[{account.address}] Attempt {i + 1}: Swapping {(swap_amount / 10 ** decimals):.4f} {pair["in"]} to {pair["out"]}')
             try:
                 if pair['in'] != 'PHRS':
-                    await self._approval_service.approve_token(account, TOKENS[pair['in']], SWAP_ROUTER_ADDRESS, swap_amount)
+                    await self._approval_service.approve_token(account_config, account, TOKENS[pair['in']], SWAP_ROUTER_ADDRESS, swap_amount)
+
+                with Web3Factory(account) as web3:
+                    transaction = await SwapTransactionBuilder() \
+                        .with_in(pair['in']) \
+                        .with_out(pair['out']) \
+                        .with_amount(swap_amount) \
+                        .with_account(account) \
+                        .with_web3(web3) \
+                        .with_router(SWAP_ROUTER_ADDRESS, ABI['swap_router']) \
+                        .build()
                     
-                transaction = await SwapTransactionBuilder() \
-                    .with_in(pair['in']) \
-                    .with_out(pair['out']) \
-                    .with_amount(swap_amount) \
-                    .with_account(account) \
-                    .with_router(SWAP_ROUTER_ADDRESS, ABI['swap_router']) \
-                    .with_web3(self._web3) \
-                    .build()
+                    signed_tx = account.sign_transaction(transaction)
                     
-                signed_tx = account.sign_transaction(transaction)
-                
-                tx_hash = await self._web3.eth.send_raw_transaction(signed_tx.raw_transaction)
-                receipt = await self._web3.eth.wait_for_transaction_receipt(tx_hash)
-                
-                tx_url = ExplorerHelper.get_tx_url(tx_hash)
-                
-                if receipt['status'] == 1:
-                    self._logger.success(f'[{account.address}] ✅ Swap transaction was successful: {tx_url}')
-                    break
-                else:
-                    self._logger.error(f'[{account.address}] ❌ Swap transaction failed: {tx_url}')
+                    tx_hash = await web3.eth.send_raw_transaction(signed_tx.raw_transaction)
+                    receipt = await web3.eth.wait_for_transaction_receipt(tx_hash)
+                    
+                    tx_url = ExplorerHelper.get_tx_url(tx_hash)
+                    
+                    if receipt['status'] == 1:
+                        self._logger.success(f'[{account.address}] ✅ Swap transaction was successful: {tx_url}')
+                        break
+                    else:
+                        self._logger.error(f'[{account.address}] ❌ Swap transaction failed: {tx_url}')
                 
             except Exception as e:
                 self._logger.error(f'[{account.address}] Error building transaction: {e}')
@@ -118,13 +118,13 @@ class Swaps(BaseFeature):
                 self._logger.info(f'[{account.address}] Sleeping for {sleep_time} seconds before next swap')
                 await asyncio.sleep(sleep_time)
 
-    async def _fetch_token_balances(self, account: LocalAccount) -> list[Tuple[str, Tuple[int, int]]]:
+    async def _fetch_token_balances(self, account_config: AccountConfig, account: LocalAccount) -> list[Tuple[str, Tuple[int, int]]]:
         balances = []
 
-        native_balance, native_decimals = await self._balance_checker.get_native_balance(account)
+        native_balance, native_decimals = await self._balance_checker.get_native_balance(account, account_config)
         balances.append(('PHRS', (native_balance, native_decimals)))
         for token in TOKENS:
-            balance, decimals = await self._balance_checker.get_balance(TOKENS[token], account)
+            balance, decimals = await self._balance_checker.get_balance(account_config, TOKENS[token], account)
             balances.append((token, (balance, decimals)))
         
         return balances
@@ -134,10 +134,10 @@ class Swaps(BaseFeature):
             formatted_balance = balance / 10 ** decimals
             self._logger.info(f'[{account.address}]: {formatted_balance:.4f} {token}')
 
-    async def _filter_out_insufficient_balances(self, account: LocalAccount) -> list[str]:
+    async def _filter_out_insufficient_balances(self, account_config: AccountConfig, account: LocalAccount) -> list[str]:
         filtered_tokens = []
         for token in TOKENS:
-            balance, decimals = await self._balance_checker.get_balance(TOKENS[token], account)
+            balance, decimals = await self._balance_checker.get_balance(account_config, TOKENS[token], account)
             if balance / 10 ** decimals > 0.001:
                 filtered_tokens.append(token)
             else:
