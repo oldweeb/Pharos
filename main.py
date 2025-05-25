@@ -23,11 +23,6 @@ async def start():
     runner = container.runner()
     await runner.run()
 
-async def cleanup():
-    web3 = container.web3()
-    if web3 and web3.provider:
-        await web3.provider._session.close()
-
 async def main():
     urllib3.disable_warnings()
     logger.remove()
@@ -45,10 +40,7 @@ async def main():
     )
 
     configure()
-    try:
-        await start()
-    finally:
-        await cleanup()
+    await start()
 
 
 if __name__ == '__main__':

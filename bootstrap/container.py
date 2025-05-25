@@ -20,7 +20,6 @@ class ApplicationContainer(containers.DeclarativeContainer):
         config_path
     )
     logger = providers.Object(logger)
-    web3 = providers.Singleton(lambda: AsyncWeb3(AsyncHTTPProvider(RPC_URL)))
     swaps_settings = providers.DelegatedCallable(
         lambda configuration: configuration.settings.swaps,
         configuration
