@@ -3,10 +3,8 @@ import yaml
 from dacite import from_dict, Config
 from dependency_injector import containers, providers
 from loguru import logger
-from web3 import AsyncWeb3, AsyncHTTPProvider
 from models.configuration import Configuration, AccountsMode
 from runner import RunnerFactory
-from constants.chain import RPC_URL
 
 
 class ApplicationContainer(containers.DeclarativeContainer):
