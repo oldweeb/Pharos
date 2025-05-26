@@ -22,6 +22,10 @@ A Python-based bot for interacting with the Pharos Testnet. This bot automates v
 - Automated check-in functionality
 - Requires authentication key
 
+### 3. Faucet
+- Daily Faucet request at https://testnet.pharosnetwork.xyz/
+- Automated captcha solving using 2captcha service
+
 ## Setup
 
 1. Install Python 3.8 or higher
@@ -63,14 +67,27 @@ To get `auth_key` follow these instructions:
 settings:
   # Swap feature settings
   swaps:
-    count_of_swaps: [1, 3]  # Range for random number of swaps per session
-    percentage_of_balance: [10, 30]  # Range for random percentage of balance to swap
+    percentage_of_balance: [1, 10]  # Range for random percentage of balance to swap
+    count_of_swaps: [1, 5]  # Range for random number of swaps per session
+    swap_back_to_native: true  # Whether to swap back to native token
     retry_count: 3  # Number of retry attempts for failed transactions
+
+  # Faucet feature settings
+  faucet:
+    enabled: true  # Whether to enable faucet feature
+    twocaptcha_key: ""  # Your 2captcha API key (get it at https://2captcha.com/enterpage)
+    retry_captcha: 3  # Number of retry attempts for captcha solving
+    retry_count: 3  # Number of retry attempts for faucet requests
+
+  # Liquidity feature settings
+  liquidity:
+    enabled: false  # Whether to enable liquidity feature
 
   # Check-in feature settings
   checkin:
-    enabled: true  # Whether to enable check-in feature
-    auth_key: "your_auth_key_here"  # Authentication key for check-in
+    enabled: false  # Whether to enable check-in feature
+    retry_count: 3  # Number of retry attempts for failed check-ins
+    pause_between_attempts: [10, 30]  # Range for random pause between attempts in seconds
 
   # General settings
   accounts_mode: "SEQUENTIAL"  # How to process accounts: "SEQUENTIAL" or "PARALLEL"

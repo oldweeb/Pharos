@@ -26,6 +26,10 @@ class ApplicationContainer(containers.DeclarativeContainer):
         lambda configuration: configuration.settings.checkin,
         configuration
     )
+    faucet_settings = providers.DelegatedCallable(
+        lambda configuration: configuration.settings.faucet,
+        configuration
+    )
     approval_service = providers.Singleton(lambda: __import__('services.approval_service', fromlist=['ApprovalService']).ApprovalService())
     balance_checker = providers.Singleton(lambda: __import__('services.balance_checker', fromlist=['BalanceChecker']).BalanceChecker())
     swaps = providers.Factory(
@@ -34,7 +38,11 @@ class ApplicationContainer(containers.DeclarativeContainer):
     checkin = providers.Factory(
         lambda: __import__('features.checkin', fromlist=['CheckIn']).CheckIn(),
     )
+    faucet = providers.Factory(
+        lambda: __import__('features.faucet', fromlist=['Faucet']).Faucet(),
+    )
     features = providers.List(
+        faucet,
         checkin,
         swaps
     )

@@ -12,9 +12,11 @@ settings:
     swap_back_to_native: true
     retry_count: 3
   faucet:
-    enabled: false
-    # @solvium_crypto_bot in TG
-    solvium_api_key: x
+    enabled: true
+    # Get your API key here: https://2captcha.com/enterpage
+    twocaptcha_key:
+    retry_captcha: 3
+    retry_count: 3
   liquidity:
     enabled: false
   checkin:
