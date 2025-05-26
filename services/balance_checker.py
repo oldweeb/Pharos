@@ -21,7 +21,7 @@ class BalanceChecker:
             Tuple[int, int]: A tuple containing (wei_balance, decimals)
         """
         # Convert token address to checksum address if it's a string
-        with Web3Factory(account_config) as web3:
+        async with Web3Factory(account_config) as web3:
             if isinstance(token_address, str):
                 token_address = web3.to_checksum_address(token_address)
                 
@@ -49,7 +49,7 @@ class BalanceChecker:
             
             return balance, decimals
 
-    async def get_native_balance(self, account: LocalAccount, web3: AsyncWeb3) -> Tuple[int, int]:
+    async def get_native_balance(self, account: LocalAccount, account_config: AccountConfig) -> Tuple[int, int]:
         """
         Get the native token (PHRS) balance for the specified account in wei and its decimals.
         
@@ -60,5 +60,6 @@ class BalanceChecker:
         Returns:
             Tuple[int, int]: A tuple containing (wei_balance, decimals) where decimals is always 18 for PHRS
         """
-        balance = await web3.eth.get_balance(account.address)
-        return balance, 18  # PHRS always has 18 decimals 
+        async with Web3Factory(account_config) as web3:
+            balance = await web3.eth.get_balance(account.address)
+            return balance, 18  # PHRS always has 18 decimals 

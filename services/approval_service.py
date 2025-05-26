@@ -19,7 +19,7 @@ class ApprovalService:
         self._logger = logger
         
     async def approve_token(self, account_config: AccountConfig, account: LocalAccount, token_address: str, spender_address: str, amount: int) -> None:
-        with Web3Factory(account) as web3:  
+        async with Web3Factory(account_config) as web3:  
             spender = web3.to_checksum_address(spender_address)
             token_address = web3.to_checksum_address(token_address)
             token_contract = web3.eth.contract(

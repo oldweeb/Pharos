@@ -2,6 +2,7 @@ import asyncio
 import urllib3
 import sys
 from loguru import logger
+import platform
 
 from bootstrap.container import container
 import runner
@@ -44,4 +45,7 @@ async def main():
 
 
 if __name__ == '__main__':
+    if platform.system() == 'Windows':
+        # Use SelectorEventLoop instead of ProactorEventLoop on Windows
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     asyncio.run(main())
