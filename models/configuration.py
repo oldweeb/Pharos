@@ -18,7 +18,9 @@ class SwapsSettings:
 @dataclass
 class FaucetSettings:
     enabled: bool
-    solvium_api_key: str
+    twocaptcha_key: str
+    retry_captcha: int
+    retry_count: int
 
 @dataclass
 class LiquiditySettings:

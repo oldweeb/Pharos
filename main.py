@@ -6,7 +6,7 @@ import platform
 
 from bootstrap.container import container
 import runner
-from features import swaps, checkin
+from features import faucet, swaps, checkin
 import services
 
 log_format = (
@@ -18,7 +18,7 @@ log_format = (
 
 def configure():
     container.init_resources()
-    container.wire(modules=[runner, swaps, checkin, services, __name__])
+    container.wire(modules=[runner, swaps, checkin, faucet, services, __name__])
 
 async def start():
     runner = container.runner()
