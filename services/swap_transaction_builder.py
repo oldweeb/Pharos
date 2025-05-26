@@ -68,7 +68,7 @@ class SwapTransactionBuilder:
 
         transaction = {
             "from": self._account.address,
-            "to": TOKENS['WPHRS'],
+            "to": self._web3.to_checksum_address(TOKENS['WPHRS']),
             "value": self._amount,
             "data": deposit_func._encode_transaction_data(),
             "chainId": CHAIN_ID,
@@ -106,7 +106,7 @@ class SwapTransactionBuilder:
             address=self._web3.to_checksum_address(self._router_contract), 
             abi=self._router_abi
         )
-        
+
         swap_data = router.encode_abi('exactInputSingle', args=[{
             'tokenIn': self._web3.to_checksum_address(TOKENS[self._in]),
             'tokenOut': self._web3.to_checksum_address(TOKENS['WPHRS']) \
@@ -117,6 +117,13 @@ class SwapTransactionBuilder:
             'amountIn': self._amount,
             'amountOutMinimum': 0,
             'sqrtPriceLimitX96': 0
+        }]) \
+        if self._in != 'PHRS' \
+        else router.encode_abi('exactInput', args=[{
+            'path': self._get_path(),
+            'recipient': self._account.address,
+            'amountIn': self._amount,
+            'deadline': await self._get_deadline(),
         }])
 
         multicall_data = [swap_data]
@@ -143,6 +150,16 @@ class SwapTransactionBuilder:
         await self._set_gas(base_tx)
         return base_tx
     
+    def _get_path(self) -> bytes:
+        path = [ 
+            AsyncWeb3.to_bytes(hexstr=TOKENS['WPHRS']), 
+            (500).to_bytes(3, 'big'),
+            AsyncWeb3.to_bytes(hexstr=TOKENS[self._out]) 
+        ]
+    
+        return b''.join(path)
+
+
     async def _get_deadline(self) -> int:
         return (await self._web3.eth.get_block('latest'))['timestamp'] + 1200
 
