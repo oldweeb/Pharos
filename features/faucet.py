@@ -1,3 +1,5 @@
+import asyncio
+import random
 from eth_account import Account
 import httpx
 from loguru._logger import Logger
@@ -9,6 +11,7 @@ from eth_account.signers.local import LocalAccount
 from bootstrap.container import ApplicationContainer
 from constants.api import FAUCET_API_URL, FAUCET_CHECK_API_URL
 from constants.captcha import CAPTCHA_KEY, CAPTCHA_SITEURL
+from constants.delay import MAX_SLEEP, MIN_SLEEP
 from features.base import BaseFeature
 from models.configuration import AccountConfig, FaucetSettings
 
@@ -57,6 +60,10 @@ class Faucet(BaseFeature):
                 if i == self._settings.retry_captcha - 1:
                     self._logger.error(f'[{account.address}] ❌ Failed to solve captcha after {self._settings.retry_captcha} attempts')
                     return
+            finally:
+                sleep_time = random.randint(MIN_SLEEP, MAX_SLEEP)
+                self._logger.info(f'[{account.address}] Sleeping for {sleep_time} seconds before next captcha attempt')
+                await asyncio.sleep(sleep_time)
         
         for i in range(self._settings.retry_count):
             try:
@@ -83,6 +90,10 @@ class Faucet(BaseFeature):
                     break
             except httpx.HTTPStatusError as e:
                 self._logger.error(f'[{account.address}] ❌ Faucet claim request error: {e}')
+            finally:
+                sleep_time = random.randint(MIN_SLEEP, MAX_SLEEP)
+                self._logger.info(f'[{account.address}] Sleeping for {sleep_time} seconds before next faucet claim attempt')
+                await asyncio.sleep(sleep_time)
         
     async def _check_is_claimed(self, account: LocalAccount, account_config: AccountConfig) -> bool:
         headers = {

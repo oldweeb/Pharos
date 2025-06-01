@@ -3,6 +3,7 @@ import random
 from eth_account import Account
 import httpx
 from constants.api import CHECKIN_API_URL
+from constants.delay import MAX_SLEEP, MIN_SLEEP
 from features.base import BaseFeature
 from models.configuration import AccountConfig, CheckinSettings
 from loguru._logger import Logger
@@ -62,7 +63,7 @@ class CheckIn(BaseFeature):
                 except httpx.RequestError as e:
                     self._logger.error(f'[{account.address}] ❌ Checkin request error: {e}')
                 finally:
-                    sleep_time = random.randint(self._settings.pause_between_attemps[0], self._settings.pause_between_attemps[1])
+                    sleep_time = random.randint(MIN_SLEEP, MAX_SLEEP)
                     self._logger.info(f'[{account.address}] Sleeping for {sleep_time} seconds before next checkin attempt')
                     await asyncio.sleep(sleep_time)
         

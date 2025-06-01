@@ -26,6 +26,18 @@ A Python-based bot for interacting with the Pharos Testnet. This bot automates v
 - Daily Faucet request at https://testnet.pharosnetwork.xyz/
 - Automated captcha solving using 2captcha service
 
+### 4. Liquidity
+- Automated liquidity provision to supported token pairs
+- Smart pool selection from available liquidity pools
+- Configurable parameters:
+  - Number of transactions per session
+  - Percentage of balance to provide
+  - Slippage tolerance
+  - Retry count for failed transactions
+- Automatic price calculation and optimal amount distribution
+- Support for both native (PHRS) and wrapped tokens
+- Transaction retry mechanism with random delays
+
 ## Setup
 
 1. Install Python 3.8 or higher
@@ -81,7 +93,12 @@ settings:
 
   # Liquidity feature settings
   liquidity:
-    enabled: false  # Whether to enable liquidity feature
+    count_of_transactions: [1, 4]  # Range for random number of liquidity transactions
+    enabled: true  # Whether to enable liquidity feature
+    percentage_of_balance: [1, 5]  # Range for random percentage of balance to provide
+    retry_count: 3  # Number of retry attempts for failed transactions
+    remove: true  # Whether to enable liquidity removal (future feature)
+    slippage: 10  # Slippage tolerance percentage for liquidity transactions
 
   # Check-in feature settings
   checkin:
