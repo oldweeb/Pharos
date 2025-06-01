@@ -24,7 +24,12 @@ class FaucetSettings:
 
 @dataclass
 class LiquiditySettings:
+    count_of_transactions: list[int]
     enabled: bool
+    percentage_of_balance: list[int]
+    retry_count: int
+    remove: bool
+    slippage: int
 
 class AccountsMode(Enum):
     SEQUENTIAL = 'sequential'
@@ -34,7 +39,7 @@ class AccountsMode(Enum):
 class CheckinSettings:
     enabled: bool
     retry_count: int
-    pause_between_attemps: list[int]
+    pause_between_attempts: list[int]
 
 @dataclass
 class Settings:

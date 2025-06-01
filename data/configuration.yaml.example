@@ -18,7 +18,12 @@ settings:
     retry_captcha: 3
     retry_count: 3
   liquidity:
-    enabled: false
+    count_of_transactions: [1, 4]
+    enabled: true
+    percentage_of_balance: [1, 5]
+    retry_count: 3
+    remove: true
+    slippage: 10 
   checkin:
     enabled: false
     retry_count: 3
