@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import random
+import asyncio
 
 import inject
 from features.base import BaseFeature
@@ -32,7 +33,11 @@ class ParallelRunner(BaseRunner):
 
     async def run(self):
         self._logger.info(f"Running in parallel, number of accounts: {len(self._configuration.accounts)}")
-        pass
+        tasks = [
+            self._run_account(account, self._configuration.settings)
+            for account in self._configuration.accounts
+        ]
+        await asyncio.gather(*tasks)
 
 class SequentialRunner(BaseRunner):
     def __init__(self, features: list[BaseFeature], configuration: Configuration, logger: Logger):
